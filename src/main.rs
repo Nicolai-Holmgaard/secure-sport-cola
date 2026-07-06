@@ -3,15 +3,17 @@ use crate::api::client::{
 };
 use crate::api::types::SaleRequest;
 use clap::Parser;
+use rand::RngExt;
 mod api;
 mod cli;
 
 #[tokio::main]
 async fn main() -> Result<(), confy::ConfyError> {
     let cli = cli::CliOptions::parse();
-    let mut cfg: cli::SSCConfig = confy::load("secure-sports-cola", "config")?;
+    let mut cfg: cli::SSCConfig = confy::load("secure-sport-cola", "config")?;
 
     let username = cli.username.unwrap_or(cfg.username.clone());
+    let room = cli.room.unwrap_or(cfg.room.clone());
     if cfg.username.is_empty() {
         if username.is_empty() {
             eprintln!(
@@ -21,7 +23,7 @@ async fn main() -> Result<(), confy::ConfyError> {
         }
 
         cfg.username = username.clone();
-        confy::store("secure-sports-cola", "config", &cfg)?;
+        confy::store("secure-sport-cola", "config", &cfg)?;
     }
     let member_id = get_member_id(&cfg.url, &username).await.unwrap();
 
@@ -31,9 +33,8 @@ async fn main() -> Result<(), confy::ConfyError> {
         return Ok(());
     }
     if cli.list {
-        let products = get_active_products(&cfg.url, cfg.room).await.unwrap();
+        let products = get_active_products(&cfg.url, room).await.unwrap();
         let named_products = get_named_products(&cfg.url).await.unwrap();
-        println!("{:#?}", named_products);
         println!("Active products:");
         for (id, product) in products {
             let short_id: i32 = id.parse().unwrap();
@@ -48,6 +49,8 @@ async fn main() -> Result<(), confy::ConfyError> {
                     }
                 })
                 .collect();
+            // let short = shorts[rand::rng().random_range(0..shorts.len())];
+            // println!("{}", short);
             println!(
                 "{:4} {:?} {:7} {}",
                 id,
@@ -59,14 +62,14 @@ async fn main() -> Result<(), confy::ConfyError> {
         return Ok(());
     }
 
-    let SaleReq = SaleRequest {
+    let sale_req = SaleRequest {
         member_id,
-        room: cfg.room,
+        room: room,
         buystring: format!("{} {}", &username, cli.buystring.join(" ")),
     };
 
-    println!("{:?}", SaleReq);
+    println!("{:?}", sale_req);
 
-    post_sale(&cfg.url, SaleReq).await.unwrap();
+    post_sale(&cfg.url, sale_req).await.unwrap();
     Ok(())
 }

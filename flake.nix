@@ -33,8 +33,8 @@
           cargo-nix = pkgs.callPackage ./Cargo.nix { inherit nixpkgs pkgs; };
         in
         rec {
-          default = secure-sports-cola;
-          secure-sports-cola = cargo-nix.rootCrate.build.overrideAttrs {
+          default = secure-sport-cola;
+          secure-sport-cola = cargo-nix.rootCrate.build.overrideAttrs {
             strictDeps = true;
             meta = {
               description = "A command line interface for stregsystemet by fklubben AAU";
