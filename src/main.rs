@@ -10,7 +10,11 @@ mod cli;
 #[tokio::main]
 async fn main() -> Result<(), confy::ConfyError> {
     let cli = cli::CliOptions::parse();
-    let mut cfg: cli::SSCConfig = confy::load("secure-sport-cola", "config")?;
+    let mut config_name: String = String::from("config");
+    if let Some(name) = cli.config {
+        config_name = name;
+    }
+    let mut cfg: cli::SSCConfig = confy::load("secure-sport-cola", config_name.as_str())?;
 
     let username = cli.username.unwrap_or(cfg.username.clone());
     let room = cli.room.unwrap_or(cfg.room.clone());
@@ -23,13 +27,17 @@ async fn main() -> Result<(), confy::ConfyError> {
         }
 
         cfg.username = username.clone();
-        confy::store("secure-sport-cola", "config", &cfg)?;
+        confy::store("secure-sport-cola", config_name.as_str(), &cfg)?;
+    }
+    if cfg.url.is_empty() {
+        eprintln!("URL is not defined in the config file.");
+        std::process::exit(1);
     }
     let member_id = get_member_id(&cfg.url, &username).await.unwrap();
 
     if cli.balance {
         let balance = get_member_balance(&cfg.url, &member_id).await.unwrap();
-        println!("Balance: {}", balance);
+        println!("Balance: {}", (balance as f32) / 100.0);
         return Ok(());
     }
     if cli.list {
@@ -49,13 +57,16 @@ async fn main() -> Result<(), confy::ConfyError> {
                     }
                 })
                 .collect();
-            // let short = shorts[rand::rng().random_range(0..shorts.len())];
+            let mut short: &String = &String::from("");
+            if !shorts.is_empty() {
+                short = &shorts[rand::rng().random_range(0..shorts.len())];
+            }
             // println!("{}", short);
             println!(
-                "{:4} {:?} {:7} {}",
+                "{:4} {:7} {:11} | {}",
                 id,
-                shorts,
-                format!("({})", product.price),
+                format!("({})", (product.price as f32) / 100.0),
+                short,
                 product.name
             );
         }
