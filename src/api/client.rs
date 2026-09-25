@@ -4,6 +4,7 @@ use crate::api::types::{
 };
 use colored::Colorize;
 use std::collections::HashMap;
+use std::process::exit;
 
 pub async fn get_member_id(
     api_url: &str,
@@ -14,8 +15,16 @@ pub async fn get_member_id(
         api_url,
         endpoints::GET_MEMBER_ID_ENDPOINT.replace("{username}", username)
     );
-    let resp = reqwest::get(url).await?.json::<MemberId>().await?;
-    Ok(resp.member_id)
+    let resp = reqwest::get(url).await?;
+
+    if resp.status() == 400 {
+        println!("There is no account with the name of: {}", username);
+        exit(1);
+    }
+
+    let json = resp.json::<MemberId>().await?;
+
+    Ok(json.member_id)
 }
 
 pub async fn get_member_balance(
@@ -46,7 +55,6 @@ pub async fn get_member_info(
     Ok(resp)
 }
 
-#[allow(dead_code)]
 pub async fn get_member_history(
     api_url: &str,
     member_id: &i32,
@@ -135,7 +143,7 @@ pub async fn post_sale(
                 if values.promille > 0.0 {
                     println!("Promille: {}‰", values.promille);
                 }
-                println!("Cost: {}", values.cost);
+                println!("Cost: {}", values.cost as f32 / 100.0);
                 println!("Member balance: {}", values.member_balance);
                 if values.member_has_low_balance {
                     println!("{}", "Warning: Low balance".red().on_yellow());

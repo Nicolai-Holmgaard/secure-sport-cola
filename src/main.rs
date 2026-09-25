@@ -1,7 +1,9 @@
 use crate::api::client::{
-    get_active_products, get_member_balance, get_member_id, get_named_products, post_sale,
+    get_active_products, get_member_balance, get_member_history, get_member_id, get_named_products,
+    post_sale,
 };
 use crate::api::types::SaleRequest;
+use crate::cli::Commands;
 use clap::Parser;
 use rand::RngExt;
 mod api;
@@ -52,80 +54,98 @@ async fn main() -> Result<(), confy::ConfyError> {
         }
     };
 
-    if cli.balance {
-        let balance = match get_member_balance(&cfg.url, &member_id).await {
-            Ok(bal) => bal,
-            Err(err) => panic!("{}", err),
-        };
-        println!("Balance: {}", (balance as f32) / 100.0);
-        return Ok(());
-    }
-    if cli.list {
-        let products = match get_active_products(&cfg.url, room).await {
-            Ok(products) => products,
-            Err(err) => {
-                eprintln!("{}", err);
-                std::process::exit(1);
-            }
-        };
-        let named_products = match get_named_products(&cfg.url).await {
-            Ok(named_products) => named_products,
-            Err(err) => {
-                eprintln!("{}", err);
-                std::process::exit(1);
-            }
-        };
-        println!("Active products:");
-        for (id, product) in products {
-            let short_id: i32 = id.parse().expect("Couldn't convert to integer");
-            let shorts: Vec<String> = named_products
-                .clone()
-                .into_iter()
-                .filter_map(|short| {
-                    if short.1 == short_id {
-                        Some(short.0)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            let mut short: &String = &String::from("");
-            if !shorts.is_empty() {
-                short = &shorts[rand::rng().random_range(0..shorts.len())];
-            }
-            // println!("{}", short);
-            println!(
-                "{:4} {:7} {:11} | {}",
-                id,
-                format!("({})", (product.price as f32) / 100.0),
-                short,
-                product.name
-            );
+    match &cli.command {
+        Some(Commands::History { username }) => {
+            let mem_id: i32 = match username {
+                Some(username) => get_member_id(&cfg.url, username).await.unwrap(),
+                None => member_id,
+            };
+
+            let history = get_member_history(&cfg.url, &mem_id).await.unwrap();
+
+            println!("{:?}", history);
         }
-        return Ok(());
-    }
+        Some(Commands::List { room_in }) => {
+            let new_room = room_in.unwrap_or_else(|| room);
 
-    if cli.buystring.is_empty() {
-        eprintln!("No buy string given, doing nothing.");
-        return Ok(());
-    }
+            let products = match get_active_products(&cfg.url, new_room).await {
+                Ok(products) => products,
+                Err(err) => {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                }
+            };
+            let named_products = match get_named_products(&cfg.url).await {
+                Ok(named_products) => named_products,
+                Err(err) => {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                }
+            };
+            println!("Active products:");
+            for (id, product) in products {
+                let short_id: i32 = id.parse().expect("Couldn't convert to integer");
+                let shorts: Vec<String> = named_products
+                    .clone()
+                    .into_iter()
+                    .filter_map(|short| {
+                        if short.1 == short_id {
+                            Some(short.0)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                let mut short: &String = &String::from("");
+                if !shorts.is_empty() {
+                    short = &shorts[rand::rng().random_range(0..shorts.len())];
+                }
+                // println!("{}", short);
+                println!(
+                    "{:4} {:7} {:11} | {}",
+                    id,
+                    format!("({})", (product.price as f32) / 100.0),
+                    short,
+                    product.name
+                );
+            }
+        }
+        Some(Commands::Balance { username }) => {
+            let mem_id: i32 = match username {
+                Some(username) => get_member_id(&cfg.url, username).await.unwrap(),
+                None => member_id,
+            };
 
-    let sale_req = SaleRequest {
-        member_id,
-        room,
-        buystring: format!("{} {}", &username, cli.buystring.join(" ")),
-    };
+            println!("member_id: {}", mem_id);
+            let balance = match get_member_balance(&cfg.url, &mem_id).await {
+                Ok(bal) => bal,
+                Err(err) => panic!("{}", err),
+            };
+            println!("Balance: {}", (balance as f32) / 100.0);
+        }
+        None => {
+            if cli.buystring.is_empty() {
+                eprintln!("No buy string given, doing nothing.");
+                return Ok(());
+            }
 
-    println!("{:?}", sale_req);
+            let sale_req = SaleRequest {
+                member_id,
+                room,
+                buystring: format!("{} {}", &username, cli.buystring.join(" ")),
+            };
 
-    match post_sale(&cfg.url, sale_req).await {
-        Ok(_) => {}
-        Err(err) => {
-            println!(
-                "Error happend during sale, please check with the official stregsystem wether you have bought your items. \n Error: {}",
-                err
-            );
+            match post_sale(&cfg.url, sale_req).await {
+                Ok(_) => {}
+                Err(err) => {
+                    println!(
+                        "Error happend during sale, please check with the official stregsystem wether you have bought your items. \n Error: {}",
+                        err
+                    );
+                }
+            }
         }
     }
+
     Ok(())
 }
