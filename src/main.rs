@@ -63,7 +63,12 @@ async fn main() -> Result<(), confy::ConfyError> {
 
             let history = get_member_history(&cfg.url, &mem_id).await.unwrap();
 
-            println!("{:?}", history);
+            for history_entry in history.sales {
+                println!(
+                    "{} | {} | {}",
+                    history_entry.timestamp, history_entry.product, history_entry.price
+                );
+            }
         }
         Some(Commands::List { room_in }) => {
             let new_room = room_in.unwrap_or_else(|| room);

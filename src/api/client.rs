@@ -1,6 +1,6 @@
 use crate::api::endpoints;
 use crate::api::types::{
-    MemberBalance, MemberId, MemberInfo, Product, Sale, SaleRequest, SaleResponse,
+    History, MemberBalance, MemberId, MemberInfo, Product, SaleRequest, SaleResponse,
 };
 use colored::Colorize;
 use std::collections::HashMap;
@@ -58,14 +58,14 @@ pub async fn get_member_info(
 pub async fn get_member_history(
     api_url: &str,
     member_id: &i32,
-) -> Result<Vec<Sale>, Box<dyn std::error::Error>> {
+) -> Result<History, Box<dyn std::error::Error>> {
     let url: String = format!(
         "{}{}",
         api_url,
         endpoints::GET_MEMBER_HISTORY_ENDPOINT
             .replace("{member_id}", member_id.to_string().as_str())
     );
-    let resp = reqwest::get(url).await?.json::<Vec<Sale>>().await?;
+    let resp = reqwest::get(url).await?.json::<History>().await?;
     Ok(resp)
 }
 

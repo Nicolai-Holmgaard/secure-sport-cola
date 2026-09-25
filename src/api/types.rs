@@ -20,16 +20,21 @@ pub struct MemberId {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Sale {
-    pub timestamp: String,
-    pub product: String,
+pub struct Product {
+    pub name: String,
     pub price: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Product {
-    pub name: String,
+pub struct HistoryEntry {
+    pub product: String,
     pub price: i32,
+    pub timestamp: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct History {
+    pub sales: Vec<HistoryEntry>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
