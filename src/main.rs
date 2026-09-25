@@ -66,7 +66,9 @@ async fn main() -> Result<(), confy::ConfyError> {
             for history_entry in history.sales {
                 println!(
                     "{} | {} | {}",
-                    history_entry.timestamp, history_entry.product, history_entry.price
+                    history_entry.timestamp,
+                    history_entry.product,
+                    history_entry.price as f32 / 100.0
                 );
             }
         }
@@ -121,7 +123,6 @@ async fn main() -> Result<(), confy::ConfyError> {
                 None => member_id,
             };
 
-            println!("member_id: {}", mem_id);
             let balance = match get_member_balance(&cfg.url, &mem_id).await {
                 Ok(bal) => bal,
                 Err(err) => panic!("{}", err),
